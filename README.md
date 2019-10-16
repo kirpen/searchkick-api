@@ -4,13 +4,19 @@
 
 **Searchkick learns what your users are looking for.** As more people search, it gets smarter and the results get better. It’s friendly for developers - and magical for your users.
 
+---
+
+[Searchkick Pro](https://searchkick.org/pro?utm_source=readme) is now available!
+
+---
+
 Searchkick handles:
 
 - stemming - `tomatoes` matches `tomato`
 - special characters - `jalapeno` matches `jalapeño`
 - extra whitespace - `dishwasher` matches `dish washer`
 - misspellings - `zuchini` matches `zucchini`
-- custom synonyms - `qtip` matches `cotton swab`
+- custom synonyms - `pop` matches `soda`
 
 Plus:
 
@@ -23,6 +29,8 @@ Plus:
 - works with ActiveRecord, Mongoid, and NoBrainer
 
 :tangerine: Battle-tested at [Instacart](https://www.instacart.com/opensource)
+
+:speech_balloon: Get [handcrafted updates](https://chartkick.us7.list-manage.com/subscribe?u=952c861f99eb43084e0a49f98&id=6ea6541e8e&group[0][4]=true) for new features
 
 [![Build Status](https://travis-ci.org/ankane/searchkick.svg?branch=master)](https://travis-ci.org/ankane/searchkick)
 
@@ -99,14 +107,19 @@ Where
 
 ```ruby
 where: {
-  expires_at: {gt: Time.now}, # lt, gte, lte also available
-  orders_count: 1..10,        # equivalent to {gte: 1, lte: 10}
-  aisle_id: [25, 30],         # in
-  store_id: {not: 2},         # not
-  aisle_id: {not: [25, 30]},  # not in
-  user_ids: {all: [1, 3]},    # all elements in array
-  category: /frozen .+/,      # regexp
-  _or: [{in_stock: true}, {backordered: true}]
+  expires_at: {gt: Time.now},   # lt, gte, lte also available
+  orders_count: 1..10,          # equivalent to {gte: 1, lte: 10}
+  aisle_id: [25, 30],           # in
+  store_id: {not: 2},           # not
+  aisle_id: {not: [25, 30]},    # not in
+  user_ids: {all: [1, 3]},      # all elements in array
+  category: {like: "%frozen%"}, # like
+  category: /frozen .+/,        # regexp
+  category: {prefix: "frozen"}, # prefix
+  store_id: {exists: true},     # exists
+  _or: [{in_stock: true}, {backordered: true}],
+  _and: [{in_stock: true}, {backordered: true}],
+  _not: {store_id: 1}           # negate a condition
 }
 ```
 
@@ -313,7 +326,7 @@ A few languages require plugins:
 
 ```ruby
 class Product < ApplicationRecord
-  searchkick synonyms: [["burger", "hamburger"], ["sneakers", "shoes"]]
+  searchkick synonyms: [["pop", "soda"], ["burger", "hamburger"]]
 end
 ```
 
@@ -1062,7 +1075,7 @@ heroku run rake searchkick:reindex CLASS=Product
 Create an initializer `config/initializers/elasticsearch.rb` with:
 
 ```ruby
-ENV["ELASTICSEARCH_URL"] = "https://es-domain-1234.us-east-1.es.amazonaws.com"
+ENV["ELASTICSEARCH_URL"] = "https://es-domain-1234.us-east-1.es.amazonaws.com:443"
 ```
 
 To use signed requests, include in your Gemfile:
@@ -1092,7 +1105,7 @@ rake searchkick:reindex CLASS=Product
 Create an initializer `config/initializers/elasticsearch.rb` with:
 
 ```ruby
-ENV["ELASTICSEARCH_URL"] = "https://user:password@host"
+ENV["ELASTICSEARCH_URL"] = "https://user:password@host:port"
 ```
 
 Then deploy and reindex:
@@ -1161,7 +1174,7 @@ If you run into issues on Windows, check out [this post](https://www.rastating.c
 
 ### Searchable Fields
 
-By default, all string fields are searchable (can be used in `fields` option). Speed up indexing and reduce index size by only making some fields searchable. This disables the `_all` field unless it’s listed.
+By default, all string fields are searchable (can be used in `fields` option). Speed up indexing and reduce index size by only making some fields searchable.
 
 ```ruby
 class Product < ApplicationRecord

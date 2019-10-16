@@ -137,6 +137,7 @@ module Searchkick
       }
 
       if options[:debug]
+        # can remove when minimum Ruby version is 2.5
         require "pp"
 
         puts "Searchkick Version: #{Searchkick::VERSION}"
@@ -434,8 +435,9 @@ module Searchkick
         if models.any? { |m| m != m.searchkick_klass }
           Searchkick.warn("Passing child models to models option throws off hits and pagination - use type option instead")
 
-          # uncomment once aliases are supported with _index
-          # see https://github.com/elastic/elasticsearch/issues/23306
+          # TODO uncomment once aliases are supported with _index
+          # should be ES 7.5
+          # see https://github.com/elastic/elasticsearch/pull/46640
           # index_type_or =
           #   models.map do |m|
           #     v = {_index: m.searchkick_index.name}
@@ -873,6 +875,8 @@ module Searchkick
           filters << {bool: {must_not: where_filters(value)}}
         elsif field == :_and
           filters << {bool: {must: value.map { |or_statement| {bool: {filter: where_filters(or_statement)}} }}}
+        # elsif field == :_script
+        #   filters << {script: {script: {source: value, lang: "painless"}}}
         else
           # expand ranges
           if value.is_a?(Range)
@@ -933,6 +937,14 @@ module Searchkick
                     }
                   }
                 }
+              when :like
+                # based on Postgres
+                # https://www.postgresql.org/docs/current/functions-matching.html
+                # % matches zero or more characters
+                # _ matches one character
+                # \ is escape character
+                regex = Regexp.escape(op_value).gsub(/(?<!\\)%/, ".*").gsub(/(?<!\\)_/, ".").gsub("\\%", "%").gsub("\\_", "_")
+                filters << {regexp: {field => {value: regex}}}
               when :prefix
                 filters << {prefix: {field => op_value}}
               when :regexp # support for regexp queries without using a regexp ruby object
@@ -945,6 +957,8 @@ module Searchkick
                 end
               when :in
                 filters << term_filters(field, op_value)
+              when :exists
+                filters << {exists: {field: field}}
               else
                 range_query =
                   case op
@@ -999,14 +1013,14 @@ module Searchkick
         if source.start_with?("\\A")
           source = source[2..-1]
         else
-          # TODO uncomment in future release
+          # TODO uncomment in Searchkick 5
           # source = ".*#{source}"
         end
 
         if source.end_with?("\\z")
           source = source[0..-3]
         else
-          # TODO uncomment in future release
+          # TODO uncomment in Searchkick 5
           # source = "#{source}.*"
         end
 

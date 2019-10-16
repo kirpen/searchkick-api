@@ -67,13 +67,27 @@ class WhereTest < Minitest::Test
     assert_search "product", ["Product B", "Product C"], where: {user_ids: {not: [2], in: [1, 3]}}
     assert_search "product", ["Product B", "Product C"], where: {user_ids: {_not: [2], in: [1, 3]}}
 
-    # not / exists
+    # not
     assert_search "product", ["Product D"], where: {user_ids: nil}
     assert_search "product", ["Product A", "Product B", "Product C"], where: {user_ids: {not: nil}}
     assert_search "product", ["Product A", "Product B", "Product C"], where: {user_ids: {_not: nil}}
     assert_search "product", ["Product A", "Product C", "Product D"], where: {user_ids: [3, nil]}
     assert_search "product", ["Product B"], where: {user_ids: {not: [3, nil]}}
     assert_search "product", ["Product B"], where: {user_ids: {_not: [3, nil]}}
+  end
+
+  def test_where_string_operators
+    error = assert_raises RuntimeError do
+      assert_search "product", [], where: {store_id: {"lt" => 2}}
+    end
+    assert_includes error.message, "Unknown where operator"
+  end
+
+  def test_unknown_operator
+    error = assert_raises RuntimeError do
+      assert_search "product", [], where: {store_id: {ilike: "%2%"}}
+    end
+    assert_includes error.message, "Unknown where operator"
   end
 
   def test_regexp
@@ -119,6 +133,37 @@ class WhereTest < Minitest::Test
     store_names ["Product A", "Product B", "Item C"]
     assert_search "*", ["Product A", "Product B"], where: {name: {prefix: "Pro"}}
   end
+
+  def test_exists
+    store [
+      {name: "Product A", user_ids: [1, 2]},
+      {name: "Product B"}
+    ]
+    assert_search "product", ["Product A"], where: {user_ids: {exists: true}}
+  end
+
+  def test_like
+    store_names ["Product ABC", "Product DEF"]
+    assert_search "product", ["Product ABC"], where: {name: {like: "%ABC%"}}
+    assert_search "product", ["Product ABC"], where: {name: {like: "%ABC"}}
+    assert_search "product", [], where: {name: {like: "ABC"}}
+    assert_search "product", [], where: {name: {like: "ABC%"}}
+    assert_search "product", [], where: {name: {like: "ABC%"}}
+    assert_search "product", ["Product ABC"], where: {name: {like: "Product_ABC"}}
+  end
+
+  def test_like_escape
+    store_names ["Product 100%", "Product B"]
+    assert_search "product", ["Product 100%"], where: {name: {like: "% 100\\%"}}
+  end
+
+  # def test_script
+  #   store [
+  #     {name: "Product A", store_id: 1},
+  #     {name: "Product B", store_id: 10}
+  #   ]
+  #   assert_search "product", ["Product A"], where: {_script: "doc['store_id'].value < 10"}
+  # end
 
   def test_where_string
     store [

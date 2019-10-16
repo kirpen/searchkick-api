@@ -1,5 +1,7 @@
-## 4.0.3 [unreleased]
+## 4.1.0
 
+- Added `like` operator
+- Added `exists` operator
 - Added warnings for certain regular expressions
 - Fixed anchored regular expressions
 
