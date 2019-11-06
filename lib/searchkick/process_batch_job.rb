@@ -36,8 +36,8 @@ module Searchkick
     def indexer(index, locale: I18n.locale, refresh:, delete:)
       I18n.with_locale(locale) do
         Searchkick.callbacks(:bulk) do
-          index.bulk_index(records) if records.any?
-          index.bulk_delete(delete_records) if delete_records.any?
+          index.bulk_index(refresh) if refresh.any?
+          index.bulk_delete(delete) if delete.any?
         end
       end
     end
